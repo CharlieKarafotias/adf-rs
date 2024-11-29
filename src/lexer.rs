@@ -11,6 +11,7 @@ pub fn from_value(input: serde_json::Value) -> model::Node {
 
 #[cfg(test)]
 mod lexer_tests {
+    use crate::model::{ExpandAttrs, HeadingAttrs};
     use super::*;
 
     #[test]
@@ -350,5 +351,151 @@ mod lexer_tests {
         );
     }
 
-    // TODO: let off testing at expand: https://developer.atlassian.com/cloud/jira/platform/apis/document/nodes/expand/
+
+    #[test]
+    fn should_read_expand() {
+        let input = r#"{
+            "type": "doc",
+            "version": 1,
+            "content": [
+                {
+                  "type": "expand",
+                  "attrs": {
+                    "title": "Hello world"
+                  },
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "type": "text",
+                          "text": "Hello world"
+                        }
+                      ]
+                    }
+                  ]
+                }
+            ]
+        }"#;
+
+        let from_str_result = from_str(input);
+        assert_eq!(
+            from_str_result,
+            model::Node::Doc {
+                version: 1,
+                content: vec![
+                    model::Node::Expand {
+                        content: vec![
+                            model::Node::Paragraph {
+                                content: vec![
+                                    model::Node::Text {
+                                        text: "Hello world".to_string(),
+                                        marks: None
+                                    }
+                                ],
+                                attrs: None
+                            }
+                        ],
+                        attrs: ExpandAttrs { title: "Hello world".to_string() },
+                        marks: None,
+                    }
+                ],
+            }
+        );
+    }
+
+    #[test]
+    fn should_read_hard_break() {
+        let input = r#"
+            {
+              "version": 1,
+              "type": "doc",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Hello"
+                    },
+                    {
+                      "type": "hardBreak"
+                    },
+                    {
+                      "type": "text",
+                      "text": "world"
+                    }
+                  ]
+                }
+              ]
+            }
+        "#;
+
+        let from_str_result = from_str(input);
+        assert_eq!(
+            from_str_result,
+            model::Node::Doc {
+                version: 1,
+                content: vec![
+                    model::Node::Paragraph {
+                        content: vec![
+                            model::Node::Text {
+                                text: "Hello".to_string(),
+                                marks: None
+                            },
+                            model::Node::HardBreak { attrs: None },
+                            model::Node::Text {
+                                text: "world".to_string(),
+                                marks: None
+                            }
+                        ],
+                        attrs: None,
+                    }
+                ]
+            }
+        );
+    }
+
+    #[test]
+    fn should_read_heading() {
+        let input = r#"{
+            "version": 1,
+            "type": "doc",
+            "content": [
+              {
+                  "type": "heading",
+                  "attrs": {
+                    "level": 1
+                  },
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Heading 1"
+                    }
+                  ]
+                }
+            ]
+        }"#;
+
+        let from_str_result = from_str(input);
+        assert_eq!(
+            from_str_result,
+            model::Node::Doc {
+                version: 1,
+                content: vec![
+                    model::Node::Heading {
+                        content: vec![
+                            model::Node::Text {
+                                text: "Heading 1".to_string(),
+                                marks: None
+                            }
+                        ],
+                        attrs: HeadingAttrs { level: 1, local_id: None },
+                    }
+                ]
+            }
+        );
+    }
+
+    // TODO: left off here: https://developer.atlassian.com/cloud/jira/platform/apis/document/nodes/inlineCard/
 }
